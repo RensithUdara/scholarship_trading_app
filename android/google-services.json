@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "5825551233",
+    "project_id": "scholarship-trading-app",
+    "storage_bucket": "scholarship-trading-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:5825551233:android:ddaf3f198464b6ae65a680",
+        "android_client_info": {
+          "package_name": "com.example.scholarship_trading_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD9YcNhTp3Ne9A62Frp_dszlaSnbvwDld8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
