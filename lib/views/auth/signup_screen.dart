@@ -48,31 +48,48 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
 
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final success = await authController.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      displayName: _nameController.text.trim(),
-      role: _selectedRole,
-    );
+    try {
+      final authController = Provider.of<AuthController>(context, listen: false);
+      final success = await authController.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        displayName: _nameController.text.trim(),
+        role: _selectedRole,
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (success) {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        setState(() {
+          _isLoading = false;
+        });
       }
-    } else {
-      if (mounted) {
+
+      if (success && mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/home', 
+          (route) => false,
+        );
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authController.errorMessage ?? 'Sign up failed'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
