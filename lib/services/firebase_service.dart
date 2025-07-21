@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 // import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user.dart' as app_user;
 import '../core/constants/app_constants.dart';
+import '../firebase_options.dart';
 
 class FirebaseService {
   static FirebaseService? _instance;
@@ -32,7 +34,21 @@ class FirebaseService {
 
   // Initialize Firebase
   static Future<void> initialize() async {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Configure Firestore settings for better performance
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+    
+    // In debug mode, disable App Check to avoid token warnings
+    if (kDebugMode) {
+      // Note: In production, you should configure proper App Check
+      print('Debug mode: App Check warnings are normal in development');
+    }
     
     // Configure Firebase Messaging
     FirebaseMessaging messaging = FirebaseMessaging.instance;
