@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/routing/app_navigator.dart';
 import '../../core/constants/app_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -59,9 +60,9 @@ class _SplashScreenState extends State<SplashScreen>
     final authController = Provider.of<AuthController>(context, listen: false);
     
     if (authController.isSignedIn) {
-      Navigator.of(context).pushReplacementNamed('/home');
+      AppNavigator.goToHome(context);
     } else {
-      Navigator.of(context).pushReplacementNamed('/auth');
+      AppNavigator.goToAuth(context);
     }
   }
 
