@@ -4,6 +4,7 @@ import '../../controllers/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../utils/debug_helper.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,29 +31,55 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _signInWithEmailPassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    DebugHelper.logDebug('LoginScreen', 'Starting email/password sign in');
+    
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     final authController = Provider.of<AuthController>(context, listen: false);
-    final success = await authController.signInWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    
+    try {
+      DebugHelper.logDebug('LoginScreen', 'Calling signInWithEmailAndPassword');
+      final success = await authController.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
+      DebugHelper.logDebug('LoginScreen', 'Sign in result: $success');
 
-    if (success) {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        setState(() {
+          _isLoading = false;
+        });
       }
-    } else {
-      if (mounted) {
+
+      if (success && mounted) {
+        DebugHelper.logDebug('LoginScreen', 'Sign in successful, navigating to home');
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/home', 
+          (route) => false,
+        );
+      } else if (mounted) {
+        DebugHelper.logDebug('LoginScreen', 'Sign in failed: ${authController.errorMessage}');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authController.errorMessage ?? 'Login failed'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      DebugHelper.logDebug('LoginScreen', 'Sign in exception: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -61,26 +88,43 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
-    final authController = Provider.of<AuthController>(context, listen: false);
-    final success = await authController.signInWithGoogle();
+    try {
+      final authController = Provider.of<AuthController>(context, listen: false);
+      final success = await authController.signInWithGoogle();
 
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (success) {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/home');
+        setState(() {
+          _isLoading = false;
+        });
       }
-    } else {
-      if (mounted) {
+
+      if (success && mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/home', 
+          (route) => false,
+        );
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authController.errorMessage ?? 'Google sign-in failed'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
             backgroundColor: AppColors.error,
           ),
         );
