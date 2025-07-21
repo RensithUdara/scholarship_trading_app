@@ -25,20 +25,26 @@ class AuthController extends ChangeNotifier {
 
   // Initialize and listen to auth state changes
   void initialize() {
+    print('AuthController: Initializing...');
     _firebaseService.authStateChanges.listen(_onAuthStateChanged);
+    print('AuthController: Initialized and listening to auth state changes');
   }
 
   // Handle auth state changes
   Future<void> _onAuthStateChanged(firebase_auth.User? firebaseUser) async {
+    print('AuthController: Auth state changed - User: ${firebaseUser?.email ?? 'null'}');
     _firebaseUser = firebaseUser;
     
     if (firebaseUser != null) {
+      print('AuthController: Loading user document for ${firebaseUser.uid}');
       // Load user document from Firestore
       await _loadUserDocument(firebaseUser.uid);
     } else {
+      print('AuthController: User signed out');
       _currentUser = null;
     }
     
+    print('AuthController: Notifying listeners');
     notifyListeners();
   }
 
