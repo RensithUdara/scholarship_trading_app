@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/scholarship.dart';
+import '../models/scholarship_filter.dart';
 import '../models/models.dart';
 import '../services/firebase_service.dart';
 import '../core/constants/app_constants.dart';
@@ -97,6 +98,130 @@ class ScholarshipController extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  // Search scholarships with query and filters
+  Future<void> searchScholarships({
+    String query = '',
+    ScholarshipFilter? filter,
+  }) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      Query firestoreQuery = _firebaseService.collection(AppConstants.scholarshipsCollection)
+          .where('status', isEqualTo: AppConstants.scholarshipApproved);
+
+      // Apply category filter
+      if (filter?.category != null && filter!.category!.isNotEmpty) {
+        firestoreQuery = firestoreQuery.where('category', isEqualTo: filter.category);
+      }
+
+      // Apply location filter
+      if (filter?.location != null && filter!.location!.isNotEmpty) {
+        firestoreQuery = firestoreQuery.where('location', isEqualTo: filter.location);
+      }
+
+      // Apply sorting
+      String sortField = 'createdAt';
+      bool descending = true;
+      
+      if (filter?.sortBy != null) {
+        switch (filter!.sortBy) {
+          case 'amount':
+            sortField = 'price';
+            descending = filter.sortOrder == 'desc';
+            break;
+          case 'deadline':
+            sortField = 'applicationDeadline';
+            descending = filter.sortOrder == 'desc';
+            break;
+          case 'title':
+            sortField = 'title';
+            descending = filter.sortOrder == 'desc';
+            break;
+          case 'viewCount':
+            sortField = 'viewCount';
+            descending = filter.sortOrder == 'desc';
+            break;
+          default:
+            sortField = 'createdAt';
+            descending = true;
+        }
+      }
+      
+      firestoreQuery = firestoreQuery.orderBy(sortField, descending: descending);
+
+      final snapshot = await firestoreQuery.limit(100).get();
+      
+      List<Scholarship> results = snapshot.docs
+          .map((doc) => Scholarship.fromFirestore(doc))
+          .toList();
+
+      // Apply client-side filters
+      results = _applyClientSideFilters(results, query, filter);
+
+      _scholarships = results;
+      _filteredScholarships = results;
+      
+    } catch (e) {
+      _errorMessage = 'Failed to search scholarships: $e';
+      print('Search error: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Apply filters that require client-side processing
+  List<Scholarship> _applyClientSideFilters(
+    List<Scholarship> scholarships,
+    String query,
+    ScholarshipFilter? filter,
+  ) {
+    List<Scholarship> filtered = [...scholarships];
+
+    // Text search in title and description
+    if (query.isNotEmpty) {
+      final lowerQuery = query.toLowerCase();
+      filtered = filtered.where((scholarship) {
+        final titleMatch = scholarship.title.toLowerCase().contains(lowerQuery);
+        final descriptionMatch = scholarship.description.toLowerCase().contains(lowerQuery);
+        final categoryMatch = scholarship.category.toLowerCase().contains(lowerQuery);
+        return titleMatch || descriptionMatch || categoryMatch;
+      }).toList();
+    }
+
+    // Amount range filter
+    if (filter?.minAmount != null || filter?.maxAmount != null) {
+      filtered = filtered.where((scholarship) {
+        final amount = scholarship.price; // Use 'price' instead of 'amount'
+        bool matchesMin = filter?.minAmount == null || amount >= filter!.minAmount!;
+        bool matchesMax = filter?.maxAmount == null || amount <= filter!.maxAmount!;
+        return matchesMin && matchesMax;
+      }).toList();
+    }
+
+    // Deadline filters
+    if (filter?.hasDeadlineSoon == true) {
+      final weekFromNow = DateTime.now().add(const Duration(days: 7));
+      filtered = filtered.where((scholarship) {
+        return scholarship.applicationDeadline.isBefore(weekFromNow);
+      }).toList();
+    }
+
+    if (filter?.deadlineAfter != null) {
+      filtered = filtered.where((scholarship) {
+        return scholarship.applicationDeadline.isAfter(filter!.deadlineAfter!);
+      }).toList();
+    }
+
+    if (filter?.deadlineBefore != null) {
+      filtered = filtered.where((scholarship) {
+        return scholarship.applicationDeadline.isBefore(filter!.deadlineBefore!);
+      }).toList();
+    }
+
+    return filtered;
   }
 
   // Load my scholarships (seller)
@@ -414,31 +539,6 @@ class ScholarshipController extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'Failed to place bid: $e';
       return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Search scholarships
-  Future<void> searchScholarships(String query) async {
-    if (query.isEmpty) {
-      _applyFilters();
-      return;
-    }
-
-    _setLoading(true);
-    
-    try {
-      // Simple text search (in a real app, you might use Algolia or similar)
-      final searchResults = _scholarships.where((scholarship) {
-        return scholarship.title.toLowerCase().contains(query.toLowerCase()) ||
-               scholarship.description.toLowerCase().contains(query.toLowerCase()) ||
-               scholarship.category.toLowerCase().contains(query.toLowerCase());
-      }).toList();
-      
-      _filteredScholarships = searchResults;
-    } catch (e) {
-      _errorMessage = 'Failed to search scholarships: $e';
     } finally {
       _setLoading(false);
     }
